@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- 背景渐变 -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a35" />
+      <stop offset="100%" stop-color="#2d2d5a" />
+    </linearGradient>
+    
+    <linearGradient id="moonGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#e0e0ff" stop-opacity="0.9" />
+    </linearGradient>
+    
+    <radialGradient id="starGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    
+    <linearGradient id="cloudGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8a6fff" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#634cc9" stop-opacity="0.8" />
+    </linearGradient>
+    
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="15" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="5" result="shadow" />
+      <feComposite in="SourceGraphic" in2="shadow" operator="over" />
+    </filter>
+  </defs>
+  
+  <!-- 圆角矩形背景 -->
+  <rect width="1024" height="1024" rx="230" ry="230" fill="url(#bgGradient)" />
+  
+  <!-- 点缀的星星 -->
+  <g id="stars">
+    <!-- 较大的星星 -->
+    <circle cx="180" cy="230" r="3" fill="#ffffff" opacity="0.8" />
+    <circle cx="260" cy="170" r="2" fill="#ffffff" opacity="0.7" />
+    <circle cx="350" cy="190" r="4" fill="#ffffff" opacity="0.9" />
+    <circle cx="780" cy="280" r="3" fill="#ffffff" opacity="0.8" />
+    <circle cx="830" cy="190" r="2" fill="#ffffff" opacity="0.7" />
+    <circle cx="710" cy="210" r="4" fill="#ffffff" opacity="0.9" />
+    <circle cx="200" cy="700" r="3" fill="#ffffff" opacity="0.8" />
+    <circle cx="300" cy="750" r="2" fill="#ffffff" opacity="0.7" />
+    <circle cx="150" cy="650" r="4" fill="#ffffff" opacity="0.9" />
+    <circle cx="800" cy="690" r="3" fill="#ffffff" opacity="0.8" />
+    <circle cx="850" cy="740" r="2" fill="#ffffff" opacity="0.7" />
+    <circle cx="750" cy="630" r="4" fill="#ffffff" opacity="0.9" />
+    
+    <!-- 带光晕的特殊星星 -->
+    <g filter="url(#glow)">
+      <circle cx="380" cy="300" r="4" fill="#ffffff" />
+      <circle cx="380" cy="300" r="10" fill="url(#starGlow)" opacity="0.5" />
+    </g>
+    
+    <g filter="url(#glow)">
+      <circle cx="720" cy="340" r="4" fill="#ffffff" />
+      <circle cx="720" cy="340" r="10" fill="url(#starGlow)" opacity="0.5" />
+    </g>
+    
+    <g filter="url(#glow)">
+      <circle cx="280" cy="680" r="4" fill="#ffffff" />
+      <circle cx="280" cy="680" r="10" fill="url(#starGlow)" opacity="0.5" />
+    </g>
+    
+    <g filter="url(#glow)">
+      <circle cx="680" cy="720" r="4" fill="#ffffff" />
+      <circle cx="680" cy="720" r="10" fill="url(#starGlow)" opacity="0.5" />
+    </g>
+  </g>
+  
+  <!-- 云朵 -->
+  <g filter="url(#softShadow)">
+    <path d="M300,600 C250,580 240,530 270,500 C240,480 240,440 270,420 C260,390 280,360 310,350 C340,320 390,320 420,350 C450,320 490,330 510,360 C540,350 570,370 580,400 C610,410 630,440 620,470 C640,500 630,540 600,560 C610,590 590,620 560,630 C540,660 500,670 470,650 C440,670 400,660 380,630 C350,650 310,640 300,600" fill="url(#cloudGradient)" opacity="0.9" />
+  </g>
+  
+  <!-- 月亮 -->
+  <g filter="url(#glow)">
+    <circle cx="512" cy="390" r="160" fill="url(#moonGlow)" />
+    
+    <!-- 月亮上的简单纹理 -->
+    <circle cx="442" cy="330" r="20" fill="#e0e0ff" opacity="0.2" />
+    <circle cx="562" cy="420" r="30" fill="#e0e0ff" opacity="0.2" />
+    <circle cx="502" cy="310" r="15" fill="#e0e0ff" opacity="0.2" />
+  </g>
+  
+  <!-- Z字符号 (代表睡眠) -->
+  <g transform="translate(512, 620) rotate(-10)">
+    <path d="M-80,-30 L80,-30 L-80,30 L80,30" stroke="#634cc9" stroke-width="25" stroke-linecap="round" fill="none" filter="url(#glow)" />
+  </g>
+  
+  <!-- 笔记本图标 -->
+  <g transform="translate(512, 540)">
+    <path d="M-50,-20 L50,-20 L50,80 L-50,80 Z" fill="#634cc9" opacity="0.9" rx="5" ry="5" />
+    <path d="M-40,-10 L40,-10 M-40,10 L0,10 M-40,30 L30,30 M-40,50 L20,50 M-40,70 L40,70" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity="0.6" />
+    
+    <!-- 笔 -->
+    <path d="M60,10 L100,-30 L110,-20 L70,20 Z" fill="#e0e0ff" opacity="0.8" transform="rotate(15)" />
+  </g>
+</svg>

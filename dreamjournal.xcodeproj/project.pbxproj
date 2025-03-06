@@ -151,6 +151,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = dreamjournal/Info.plist;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "we need your micro privilege to record your dream";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "we need speech recognition privileges to record your dream";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -182,6 +184,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = dreamjournal/Info.plist;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "we need your micro privilege to record your dream";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "we need speech recognition privileges to record your dream";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
