@@ -60,9 +60,9 @@ class DreamStore: ObservableObject {
     // 加载示例数据
     private func loadSampleDreams() {
         dreams = [
-            Dream(id: "1", title: "飞行梦", description: "我梦见自己在城市上空飞行，感觉非常自由...", date: Date(), clarity: 8, emotion: "😮", tags: ["飞行", "城市", "自由"]),
-            Dream(id: "2", title: "迷宫梦", description: "在一个复杂的迷宫中寻找出口，墙壁不断变化...", date: Date().addingTimeInterval(-86400), clarity: 6, emotion: "😨", tags: ["迷宫", "寻找", "恐惧"]),
-            Dream(id: "3", title: "海边漫步", description: "我梦见自己在一个安静的海滩上漫步，海浪声非常清晰...", date: Date().addingTimeInterval(-3*86400), clarity: 9, emotion: "😌", tags: ["海滩", "平静", "水"])
+            Dream(id: "1", title: "飞行梦", dreamContent: "我梦见自己在城市上空飞行，感觉非常自由...", date: Date(), clarity: 8, emotion: "😮", tags: ["飞行", "城市", "自由"]),
+            Dream(id: "2", title: "迷宫梦", dreamContent: "在一个复杂的迷宫中寻找出口，墙壁不断变化...", date: Date().addingTimeInterval(-86400), clarity: 6, emotion: "😨", tags: ["迷宫", "寻找", "恐惧"]),
+            Dream(id: "3", title: "海边漫步", dreamContent: "我梦见自己在一个安静的海滩上漫步，海浪声非常清晰...", date: Date().addingTimeInterval(-3*86400), clarity: 9, emotion: "😌", tags: ["海滩", "平静", "水"])
         ]
     }
 }

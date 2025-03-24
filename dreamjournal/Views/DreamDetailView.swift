@@ -1,8 +1,12 @@
 import SwiftUI
+import SwiftData
 
 struct DreamDetailView: View {
-    let dream: Dream
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var dream: Dream
     @State private var showEditSheet: Bool = false
+    @State private var showDeleteConfirmation: Bool = false
     
     // 模拟一些相似梦境
     let similarDreams = [
@@ -42,21 +46,25 @@ struct DreamDetailView: View {
                         .fill(Color("CardBackgroundColor"))
                 )
                 
-//                // 标签部分
-//                VStack(alignment: .leading, spacing: 8) {
-//                    Text("标签:")
-//                        .font(.subheadline)
-//                        .foregroundColor(Color("SubtitleColor"))
-//                    
-//                    ScrollView(.horizontal, showsIndicators: false) {
-//                        HStack(spacing: 8) {
-//                            ForEach(dream.tags, id: \.self) { tag in
-//                                TagView(tag: tag)
-//                            }
-//                        }
-//                    }
-//                }
-//                .padding(.horizontal)
+                // 标签部分
+                if !dream.tags.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("标签:")
+                            .font(.subheadline)
+                            .foregroundColor(Color("SubtitleColor"))
+                        
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(dream.tags, id: \.self) { tag in
+                                    TagView(tag: tag, isSelected: true) {
+                                        // Read-only mode, so no removal action
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
                 
                 // 梦境描述
                 VStack(alignment: .leading, spacing: 8) {
@@ -64,7 +72,7 @@ struct DreamDetailView: View {
                         .font(.subheadline)
                         .foregroundColor(Color("SubtitleColor"))
                     
-                    Text(dream.description)
+                    Text(dream.dreamContent)
                         .foregroundColor(.white)
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -120,6 +128,45 @@ struct DreamDetailView: View {
                 }
                 .padding(.horizontal)
                 
+                // 额外信息
+                if dream.isLucidDream {
+                    InfoCard(title: "清醒梦", systemImage: "sparkles", content: "这是一个清醒梦，你在梦中意识到自己在做梦。")
+                        .padding(.horizontal)
+                }
+                
+                if dream.isFavorite {
+                    InfoCard(title: "收藏梦境", systemImage: "heart.fill", content: "这个梦已被添加到您的收藏中。")
+                        .padding(.horizontal)
+                }
+                
+                // 删除按钮
+                Button(action: {
+                    showDeleteConfirmation = true
+                }) {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "trash")
+                        Text("删除梦境")
+                        Spacer()
+                    }
+                    .foregroundColor(.red)
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color("CardBackgroundColor"))
+                    )
+                }
+                .padding(.horizontal)
+                .padding(.top, 20)
+                .alert("确认删除", isPresented: $showDeleteConfirmation) {
+                    Button("取消", role: .cancel) { }
+                    Button("删除", role: .destructive) {
+                        deleteDream()
+                    }
+                } message: {
+                    Text("您确定要删除这个梦境记录吗？此操作无法撤销。")
+                }
+                
                 Spacer()
             }
             .padding(.vertical)
@@ -127,21 +174,38 @@ struct DreamDetailView: View {
         .background(Color("BackgroundColor").edgesIgnoringSafeArea(.all))
         .navigationTitle("梦境详情")
         .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {
-                            showEditSheet = true
-                        }) {
-                            Image(systemName: "pencil")
-                                .foregroundColor(Color("SubtitleColor"))
-                                .padding(8)
-                                .background(Circle().fill(Color("CardBackgroundColor")))
-                        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack {
+                    Button(action: {
+                        dream.isFavorite.toggle()
+                    }) {
+                        Image(systemName: dream.isFavorite ? "heart.fill" : "heart")
+                            .foregroundColor(dream.isFavorite ? .red : Color("SubtitleColor"))
+                            .padding(8)
+                            .background(Circle().fill(Color("CardBackgroundColor")))
+                    }
+                    
+                    Button(action: {
+                        showEditSheet = true
+                    }) {
+                        Image(systemName: "pencil")
+                            .foregroundColor(Color("SubtitleColor"))
+                            .padding(8)
+                            .background(Circle().fill(Color("CardBackgroundColor")))
                     }
                 }
-                .sheet(isPresented: $showEditSheet) {
-                    EditDreamView(dream: dream)
-                }
+            }
+        }
+        .sheet(isPresented: $showEditSheet) {
+            EditDreamView(dream: dream)
+        }
+    }
+    
+    // 删除当前梦境
+    private func deleteDream() {
+        modelContext.delete(dream)
+        dismiss()
     }
     
     // 格式化日期
@@ -174,6 +238,34 @@ struct DreamDetailView: View {
     }
 }
 
-
-
-
+// 信息卡片组件
+struct InfoCard: View {
+    let title: String
+    let systemImage: String
+    let content: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.title3)
+                .foregroundColor(Color("AccentColor"))
+                .frame(width: 24)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Text(content)
+                    .font(.caption)
+                    .foregroundColor(Color("SubtitleColor"))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color("CardBackgroundColor"))
+        )
+    }
+}

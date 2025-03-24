@@ -1,26 +1,45 @@
 import SwiftUI
 import Speech
+import AVFoundation
+import SwiftData
 
 struct AddDreamView: View {
-    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.dismiss) var dismiss
+    @Environment(\.modelContext) private var modelContext
+    
+    // 基本梦境属性
     @State private var dreamTitle: String = ""
     @State private var dreamDescription: String = ""
     @State private var selectedEmotion: String = "😌"
     @State private var clarity: Double = 5.0
     @State private var selectedTags: [String] = []
-    @State private var newTag: String = ""
-    @State private var isRecording: Bool = false
-    @State private var recordingText: String = ""
     @State private var date: Date = Date()
-    
-    let emotions = ["😊", "😌", "😮", "😨", "🤔", "😢"]
-    let availableTags = ["海滩", "飞行", "迷宫", "自由", "恐惧", "水", "城市", "平静"]
+    @State private var isLucidDream: Bool = false
+    @State private var isFavorite: Bool = false
     
     // 语音识别相关
+    @State private var isRecording: Bool = false
+    @State private var recordingText: String = ""
+    @State private var speechRecognitionEnabled = false
+    @State private var microphoneEnabled = false
+    @State private var showAuthorizationAlert = false
+    @State private var authorizationAlertMessage = ""
+    
+    // 标签选择相关
+    @State private var showingTagSheet = false
+    
+    // 情绪选择相关
+    @State private var showingEmotionSheet = false
+    
     private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "zh-CN"))
     @State private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     @State private var recognitionTask: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()
+    
+    let emotions = ["😊", "😌", "😮", "😨", "🤔", "😢", "😴", "🥰", "😎", "😭", "😱", "🤯", "😇"]
+    let availableTags = ["海滩", "飞行", "迷宫", "自由", "恐惧", "水", "城市", "平静",
+                         "探索", "追逐", "坠落", "考试", "工作", "家人", "朋友", "动物",
+                         "太空", "旅行", "奇幻", "失落", "寻找", "战斗", "逃离"]
     
     var body: some View {
         NavigationView {
@@ -54,12 +73,24 @@ struct AddDreamView: View {
                         
                         // 情绪选择器
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("情绪:")
-                                .foregroundColor(Color("SubtitleColor"))
+                            HStack {
+                                Text("情绪:")
+                                    .foregroundColor(Color("SubtitleColor"))
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    showingEmotionSheet = true
+                                }) {
+                                    Text("查看全部")
+                                        .font(.caption)
+                                        .foregroundColor(Color("AccentColor"))
+                                }
+                            }
                             
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
-                                    ForEach(emotions, id: \.self) { emotion in
+                                    ForEach(emotions.prefix(7), id: \.self) { emotion in
                                         EmotionButton(
                                             emotion: emotion,
                                             isSelected: selectedEmotion == emotion,
@@ -69,7 +100,7 @@ struct AddDreamView: View {
                                     
                                     // 添加自定义情绪按钮
                                     Button(action: {
-                                        // 显示自定义情绪选择器
+                                        showingEmotionSheet = true
                                     }) {
                                         ZStack {
                                             Circle()
@@ -101,6 +132,18 @@ struct AddDreamView: View {
                             
                             Slider(value: $clarity, in: 1...10, step: 1)
                                 .accentColor(Color("AccentColor"))
+                            
+                            HStack {
+                                Text("模糊")
+                                    .font(.caption)
+                                    .foregroundColor(Color("SubtitleColor"))
+                                
+                                Spacer()
+                                
+                                Text("清晰")
+                                    .font(.caption)
+                                    .foregroundColor(Color("SubtitleColor"))
+                            }
                         }
                         
                         // 梦境描述
@@ -114,6 +157,19 @@ struct AddDreamView: View {
                                 .background(Color("CardBackgroundColor"))
                                 .cornerRadius(8)
                                 .foregroundColor(.white)
+                            
+                            // 显示当前录音文本（如果有）
+                            if isRecording && !recordingText.isEmpty {
+                                Text(recordingText)
+                                    .font(.caption)
+                                    .foregroundColor(Color("AccentColor"))
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color("CardBackgroundColor").opacity(0.5))
+                                    )
+                            }
                         }
                         
                         // 语音录入按钮
@@ -136,9 +192,9 @@ struct AddDreamView: View {
                                             .fill(Color.white)
                                             .frame(width: 16, height: 16)
                                     } else {
-                                        Circle()
-                                            .fill(Color.white)
-                                            .frame(width: 18, height: 18)
+                                        Image(systemName: "mic.fill")
+                                            .foregroundColor(.white)
+                                            .font(.system(size: 20))
                                     }
                                 }
                             }
@@ -153,34 +209,74 @@ struct AddDreamView: View {
                         
                         // 标签选择
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("标签:")
-                                .foregroundColor(Color("SubtitleColor"))
+                            HStack {
+                                Text("标签:")
+                                    .foregroundColor(Color("SubtitleColor"))
+                                
+                                Spacer()
+                                
+                                Button(action: showTagPicker) {
+                                    Label("添加标签", systemImage: "tag")
+                                        .font(.caption)
+                                        .foregroundColor(Color("AccentColor"))
+                                }
+                            }
                             
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(selectedTags, id: \.self) { tag in
-                                        TagView(tag: tag, isSelected: true) {
-                                            selectedTags.removeAll { $0 == tag }
-                                        }
-                                    }
-                                    
-                                    // 添加标签按钮
-                                    Button(action: {
-                                        showTagPicker()
-                                    }) {
-                                        ZStack {
-                                            Capsule()
-                                                .stroke(Color("BorderColor"), lineWidth: 1)
-                                                .frame(width: 36, height: 26)
-                                            
-                                            Text("+")
-                                                .font(.caption)
-                                                .foregroundColor(Color("SubtitleColor"))
+                            if selectedTags.isEmpty {
+                                Text("点击添加标签按钮添加相关标签")
+                                    .font(.caption)
+                                    .foregroundColor(Color("MutedColor"))
+                                    .padding(.vertical, 12)
+                            } else {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(selectedTags, id: \.self) { tag in
+                                            TagView(tag: tag, isSelected: true) {
+                                                selectedTags.removeAll { $0 == tag }
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                        
+                        // 附加选项
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("附加选项:")
+                                .font(.subheadline)
+                                .foregroundColor(Color("SubtitleColor"))
+                            
+                            Toggle(isOn: $isLucidDream) {
+                                HStack {
+                                    Image(systemName: "sparkles")
+                                        .foregroundColor(Color("AccentColor"))
+                                    Text("清醒梦")
+                                        .foregroundColor(.white)
+                                    
+                                    Button(action: {
+                                        showLucidDreamInfo()
+                                    }) {
+                                        Image(systemName: "info.circle")
+                                            .font(.caption)
+                                            .foregroundColor(Color("SubtitleColor"))
+                                    }
+                                }
+                            }
+                            .toggleStyle(SwitchToggleStyle(tint: Color("AccentColor")))
+                            
+                            Toggle(isOn: $isFavorite) {
+                                HStack {
+                                    Image(systemName: "heart.fill")
+                                        .foregroundColor(.red)
+                                    Text("收藏梦境")
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .toggleStyle(SwitchToggleStyle(tint: Color("AccentColor")))
+                        }
+                        .padding()
+                        .background(Color("CardBackgroundColor"))
+                        .cornerRadius(10)
                     }
                     .padding()
                 }
@@ -190,7 +286,7 @@ struct AddDreamView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") {
-                        presentationMode.wrappedValue.dismiss()
+                        dismiss()
                     }
                 }
                 
@@ -205,88 +301,224 @@ struct AddDreamView: View {
             .onAppear {
                 requestSpeechRecognitionAuthorization()
             }
+            .alert(isPresented: $showAuthorizationAlert) {
+                Alert(
+                    title: Text("需要权限"),
+                    message: Text(authorizationAlertMessage),
+                    dismissButton: .default(Text("好的"))
+                )
+            }
+            .sheet(isPresented: $showingTagSheet) {
+                TagPickerView(selectedTags: $selectedTags, availableTags: availableTags)
+            }
+            .sheet(isPresented: $showingEmotionSheet) {
+                EmotionPickerView(selectedEmotion: $selectedEmotion, emotions: emotions)
+            }
         }
     }
     
     // 保存梦境
     private func saveDream() {
-        // 处理输入数据并保存梦境
         let newDream = Dream(
-            id: UUID().uuidString,
             title: dreamTitle.isEmpty ? "未命名梦境" : dreamTitle,
-            description: dreamDescription,
+            dreamContent: dreamDescription,
             date: date,
             clarity: Int(clarity),
             emotion: selectedEmotion,
-            tags: selectedTags
+            tags: selectedTags,
+            isFavorite: isFavorite,
+            isLucidDream: isLucidDream
         )
         
-        // 实际项目中，这里会将newDream保存到数据存储中
-        print("保存梦境:", newDream)
+        // 使用SwiftData保存新梦境
+        modelContext.insert(newDream)
         
         // 返回上一页
-        presentationMode.wrappedValue.dismiss()
+        dismiss()
     }
     
     // 显示标签选择器
-    private func showTagPicker() {
-        // 实际应用中这里应该显示一个标签选择的sheet或者弹窗
-        // 简化示例，我们假设选择了一个新标签
-        if !availableTags.isEmpty {
-            let availableTag = availableTags.first(where: { !selectedTags.contains($0) })
-            if let tag = availableTag {
-                selectedTags.append(tag)
-            }
-        }
+    func showTagPicker() {
+        // 显示标签选择sheet
+        showingTagSheet = true
+    }
+    
+    // 显示清醒梦信息
+    func showLucidDreamInfo() {
+        authorizationAlertMessage = "清醒梦是指在梦中意识到自己正在做梦，并且可能有能力控制梦境内容的梦。勾选此选项表示这是一个清醒梦。"
+        showAuthorizationAlert = true
     }
     
     // 请求语音识别权限
-    private func requestSpeechRecognitionAuthorization() {
+    func requestSpeechRecognitionAuthorization() {
+        // 语音识别权限
         SFSpeechRecognizer.requestAuthorization { status in
-            // 处理授权结果
-        }
-    }
-    
-    // 开始录音
-    private func startRecording() {
-        // 实际应用中这里需要实现开始录音的逻辑
-        isRecording = true
-    }
-    
-    // 停止录音
-    private func stopRecording() {
-        // 实际应用中这里需要实现停止录音并处理识别结果的逻辑
-        isRecording = false
-        
-        // 模拟更新描述文本
-        if dreamDescription.isEmpty {
-            dreamDescription = "我梦见自己在一个安静的海滩上漫步，海浪声非常清晰。天空是紫色的，有两轮明月。我感到非常平静和放松..."
-        } else {
-            dreamDescription += "\n\n接着，我走进了大海，但奇怪的是我能在水面上行走..."
-        }
-    }
-}
-
-// 情绪按钮组件
-struct EmotionButton: View {
-    let emotion: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(isSelected ? Color("AccentColor") : Color("CardBackgroundColor"))
-                    .frame(width: 36, height: 36)
-                    .overlay(
-                        Circle()
-                            .stroke(isSelected ? Color.clear : Color("BorderColor"), lineWidth: 1)
-                    )
-                
-                Text(emotion)
-                    .font(.title3)
+            DispatchQueue.main.async {
+                switch status {
+                case .authorized:
+                    // 用户授权了语音识别
+                    print("语音识别已授权")
+                    self.speechRecognitionEnabled = true
+                    
+                    // 同时请求麦克风权限
+                    self.requestMicrophoneAuthorization()
+                    
+                case .denied:
+                    // 用户拒绝了语音识别
+                    print("语音识别授权被拒绝")
+                    self.speechRecognitionEnabled = false
+                    self.showAuthorizationAlert = true
+                    self.authorizationAlertMessage = "要使用语音记录功能，请在设置中允许此应用使用语音识别。"
+                    
+                case .restricted, .notDetermined:
+                    // 语音识别受限或未确定
+                    print("语音识别权限受限或未确定")
+                    self.speechRecognitionEnabled = false
+                }
             }
         }
     }
+    
+    // 请求麦克风权限
+        private func requestMicrophoneAuthorization() {
+            AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        // 用户授权了麦克风
+                        print("麦克风已授权")
+                        self.microphoneEnabled = true
+                    } else {
+                        // 用户拒绝了麦克风
+                        print("麦克风授权被拒绝")
+                        self.microphoneEnabled = false
+                        self.showAuthorizationAlert = true
+                        self.authorizationAlertMessage = "要使用语音记录功能，请在设置中允许此应用使用麦克风。"
+                    }
+                }
+            }
+        }
+        
+        // 开始录音
+        func startRecording() {
+            // 确保已获得所需权限
+            guard speechRecognitionEnabled && microphoneEnabled else {
+                print("缺少必要权限，无法开始录音")
+                showAuthorizationAlert = true
+                authorizationAlertMessage = "要使用语音记录功能，请在设置中允许此应用使用麦克风和语音识别。"
+                return
+            }
+            
+            // 检查语音识别是否可用
+            guard let recognizer = speechRecognizer, recognizer.isAvailable else {
+                print("语音识别器不可用")
+                return
+            }
+            
+            // 停止任何现有的识别任务
+            if let recognitionTask = recognitionTask {
+                recognitionTask.cancel()
+                self.recognitionTask = nil
+            }
+            
+            // 创建音频会话
+            let audioSession = AVAudioSession.sharedInstance()
+            do {
+                try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+                try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            } catch {
+                print("设置音频会话失败: \(error)")
+                return
+            }
+            
+            // 创建识别请求
+            self.recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
+            
+            // 确保创建请求成功
+            guard let recognitionRequest = recognitionRequest else {
+                print("无法创建语音识别请求")
+                return
+            }
+            
+            // 配置请求选项
+            recognitionRequest.shouldReportPartialResults = true
+            
+            // 创建输入节点
+            let inputNode = audioEngine.inputNode
+            
+            // 开始识别任务
+            recognitionTask = recognizer.recognitionTask(with: recognitionRequest) { result, error in
+                var isFinal = false
+                
+                if let result = result {
+                    // 更新识别文本
+                    DispatchQueue.main.async {
+                        self.recordingText = result.bestTranscription.formattedString
+                    }
+                    isFinal = result.isFinal
+                }
+                
+                if error != nil || isFinal {
+                    // 停止音频引擎
+                    self.audioEngine.stop()
+                    inputNode.removeTap(onBus: 0)
+                    
+                    self.recognitionRequest = nil
+                    self.recognitionTask = nil
+                    
+                    DispatchQueue.main.async {
+                        // 停止录音状态
+                        self.isRecording = false
+                        
+                        // 将识别的文本添加到梦境描述
+                        if !self.recordingText.isEmpty {
+                            if self.dreamDescription.isEmpty {
+                                self.dreamDescription = self.recordingText
+                            } else {
+                                self.dreamDescription += "\n\n" + self.recordingText
+                            }
+                            // 清空录音文本，为下次录音做准备
+                            self.recordingText = ""
+                        }
+                    }
+                }
+            }
+            
+            // 配置音频格式
+            let recordingFormat = inputNode.outputFormat(forBus: 0)
+            
+            // 安装音频输入tap
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+                self.recognitionRequest?.append(buffer)
+            }
+            
+            // 启动音频引擎
+            audioEngine.prepare()
+            
+            do {
+                try audioEngine.start()
+                DispatchQueue.main.async {
+                    // 开始录音状态
+                    self.isRecording = true
+                }
+            } catch {
+                print("音频引擎启动失败: \(error)")
+            }
+        }
+        
+        // 停止录音
+        func stopRecording() {
+            if audioEngine.isRunning {
+                audioEngine.stop()
+                recognitionRequest?.endAudio()
+                // 状态更新将在recognitionTask的完成回调中处理
+            } else {
+                DispatchQueue.main.async {
+                    self.isRecording = false
+                }
+            }
+        }
 }
+
+
+
+

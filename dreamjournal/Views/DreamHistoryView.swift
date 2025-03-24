@@ -1,15 +1,15 @@
 import SwiftUI
+import SwiftData
 
 struct DreamHistoryView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Dream.date, order: .reverse) private var allDreams: [Dream]
+    
     @State private var filterOption: FilterOption = .all
     @State private var searchText: String = ""
     @State private var isGridView: Bool = false
-    @State private var dreams: [Dream] = [
-        Dream(id: "1", title: "飞行梦", description: "我梦见自己在城市上空飞行，感觉非常自由...", date: Date(), clarity: 8, emotion: "😮", tags: ["飞行", "城市", "自由"]),
-        Dream(id: "2", title: "迷宫梦", description: "在一个复杂的迷宫中寻找出口，墙壁不断变化...", date: Date().addingTimeInterval(-86400), clarity: 6, emotion: "😨", tags: ["迷宫", "寻找", "恐惧"]),
-        Dream(id: "3", title: "海边漫步", description: "我梦见自己在一个安静的海滩上漫步，海浪声非常清晰...", date: Date().addingTimeInterval(-3*86400), clarity: 9, emotion: "😌", tags: ["海滩", "平静", "水"]),
-        Dream(id: "4", title: "古老图书馆", description: "在一个巨大的古代图书馆中探索，书架高耸入云...", date: Date().addingTimeInterval(-7*86400), clarity: 3, emotion: "🤔", tags: ["图书馆", "探索", "知识"])
-    ]
+    @State private var selectedTags: [String] = []
+    @State private var selectedEmotion: String = ""
     
     // 筛选选项
     enum FilterOption: String, CaseIterable {
@@ -18,16 +18,54 @@ struct DreamHistoryView: View {
         case emotions = "情绪"
     }
     
+    // 所有可用的标签
+    var availableTags: [String] {
+        var tags: Set<String> = []
+        for dream in allDreams {
+            for tag in dream.tags {
+                tags.insert(tag)
+            }
+        }
+        return Array(tags).sorted()
+    }
+    
+    // 所有可用的情绪
+    var availableEmotions: [String] {
+        var emotions: Set<String> = []
+        for dream in allDreams {
+            emotions.insert(dream.emotion)
+        }
+        return Array(emotions).sorted()
+    }
+    
+    // 筛选后的梦境
     var filteredDreams: [Dream] {
-        if searchText.isEmpty {
-            return dreams
-        } else {
-            return dreams.filter { dream in
+        var filtered = allDreams
+        
+        // 应用搜索文本筛选
+        if !searchText.isEmpty {
+            filtered = filtered.filter { dream in
                 dream.title.localizedCaseInsensitiveContains(searchText) ||
                 dream.description.localizedCaseInsensitiveContains(searchText) ||
                 dream.tags.contains { $0.localizedCaseInsensitiveContains(searchText) }
             }
         }
+        
+        // 应用标签筛选
+        if filterOption == .tags && !selectedTags.isEmpty {
+            filtered = filtered.filter { dream in
+                selectedTags.contains { tag in
+                    dream.tags.contains(tag)
+                }
+            }
+        }
+        
+        // 应用情绪筛选
+        if filterOption == .emotions && !selectedEmotion.isEmpty {
+            filtered = filtered.filter { $0.emotion == selectedEmotion }
+        }
+        
+        return filtered
     }
     
     var body: some View {
@@ -47,26 +85,111 @@ struct DreamHistoryView: View {
                         .padding(.horizontal)
                         .padding(.top, 12)
                     
+                    // 标签筛选器（如果选择了标签筛选）
+                    if filterOption == .tags && !availableTags.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(availableTags, id: \.self) { tag in
+                                    TagFilterButton(
+                                        tag: tag,
+                                        isSelected: selectedTags.contains(tag),
+                                        action: {
+                                            if selectedTags.contains(tag) {
+                                                selectedTags.removeAll { $0 == tag }
+                                            } else {
+                                                selectedTags.append(tag)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+                        }
+                    }
+                    
+                    // 情绪筛选器（如果选择了情绪筛选）
+                    if filterOption == .emotions && !availableEmotions.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                Button(action: {
+                                    selectedEmotion = ""
+                                }) {
+                                    Text("全部")
+                                        .font(.caption)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(
+                                            Capsule()
+                                                .fill(selectedEmotion.isEmpty ? Color("AccentColor") : Color("CardBackgroundColor"))
+                                        )
+                                        .foregroundColor(selectedEmotion.isEmpty ? .white : Color("SubtitleColor"))
+                                }
+                                
+                                ForEach(availableEmotions, id: \.self) { emotion in
+                                    Button(action: {
+                                        selectedEmotion = emotion
+                                    }) {
+                                        Text(emotion)
+                                            .font(.title3)
+                                            .padding(8)
+                                            .background(
+                                                Circle()
+                                                    .fill(selectedEmotion == emotion ? Color("AccentColor") : Color("CardBackgroundColor"))
+                                            )
+                                    }
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+                        }
+                    }
+                    
                     // 视图切换
                     HStack {
+                        Text("\(filteredDreams.count)个梦境")
+                            .font(.caption)
+                            .foregroundColor(Color("SubtitleColor"))
+                        
                         Spacer()
                         
                         ViewToggle(isGridView: $isGridView)
-                            .padding(.trailing)
-                            .padding(.top, 8)
                     }
+                    .padding(.horizontal)
+                    .padding(.top, 12)
                     
                     // 梦境列表
-                    if isGridView {
-                        DreamGrid(dreams: filteredDreams)
-                            .padding(.top, 12)
+                    if filteredDreams.isEmpty {
+                        VStack {
+                            Spacer()
+                            Image(systemName: "moon.stars")
+                                .font(.largeTitle)
+                                .foregroundColor(Color("SubtitleColor"))
+                                .padding()
+                            
+                            Text("没有找到匹配的梦境")
+                                .font(.headline)
+                                .foregroundColor(Color("SubtitleColor"))
+                            
+                            if !searchText.isEmpty || filterOption != .all {
+                                Text("尝试更改搜索条件")
+                                    .font(.subheadline)
+                                    .foregroundColor(Color("MutedColor"))
+                                    .padding(.top, 4)
+                            }
+                            Spacer()
+                        }
+                        .padding(.top, 40)
                     } else {
-                        DreamList(dreams: filteredDreams)
-                            .padding(.top, 12)
+                        if isGridView {
+                            DreamGrid(dreams: filteredDreams)
+                                .padding(.top, 12)
+                        } else {
+                            DreamList(dreams: filteredDreams)
+                                .padding(.top, 12)
+                        }
                     }
                 }
-                
-                
             }
             .navigationTitle("梦境历史")
             .navigationBarTitleDisplayMode(.large)
@@ -74,34 +197,28 @@ struct DreamHistoryView: View {
     }
 }
 
-// 搜索栏组件
-struct SearchBar: View {
-    @Binding var text: String
+// 标签筛选按钮组件
+struct TagFilterButton: View {
+    let tag: String
+    let isSelected: Bool
+    let action: () -> Void
     
     var body: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(Color("SubtitleColor"))
-            
-            TextField("搜索梦境...", text: $text)
-                .foregroundColor(.white)
-            
-            if !text.isEmpty {
-                Button(action: {
-                    text = ""
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(Color("SubtitleColor"))
-                }
-            }
+        Button(action: action) {
+            Text(tag)
+                .font(.caption)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? Color("AccentColor") : Color("CardBackgroundColor"))
+                )
+                .foregroundColor(isSelected ? .white : Color("SubtitleColor"))
         }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color("CardBackgroundColor"))
-        )
     }
 }
+
+
 
 // 筛选栏组件
 struct FilterBar: View {
@@ -384,13 +501,5 @@ struct DreamGridItem: View {
         } else {
             return "低"
         }
-    }
-}
-
-// 预览
-struct DreamHistoryView_Previews: PreviewProvider {
-    static var previews: some View {
-        DreamHistoryView()
-            .preferredColorScheme(.dark)
     }
 }
