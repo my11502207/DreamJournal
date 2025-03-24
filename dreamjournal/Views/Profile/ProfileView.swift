@@ -3,12 +3,14 @@ import SwiftData
 
 struct ProfileView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var securityService: AppSecurityService
     @AppStorage("userName") private var userName: String = "梦想家"
     @AppStorage("userAvatar") private var userAvatar: String = "person.circle.fill"
     @State private var showingImagePicker = false
     @State private var showingNameEditor = false
-    @State private var newUserName: String = ""
     @State private var showingPrivacyTerms = false
+    @State private var showingSecuritySettings = false
+    @State private var newUserName: String = ""
     @State private var selectedAvatar = 0
     
     // 查询收藏的梦境数量
@@ -73,10 +75,22 @@ struct ProfileView: View {
                         
                         // 设置区
                         ProfileSectionView(title: "设置与信息") {
+                            // 添加安全设置入口
+                            Button(action: {
+                                showingSecuritySettings = true
+                            }) {
+                                ProfileMenuRow(
+                                    icon: "lock.shield",
+                                    title: "隐私与安全",
+                                    subtitle: securityService.isSecurityEnabled ? "已启用" : "未启用",
+                                    iconColor: .green
+                                )
+                            }
+                            
                             Button(action: {
                                 showingPrivacyTerms = true
                             }) {
-                                ProfileMenuRow(icon: "lock.shield", title: "隐私条款", iconColor: .green)
+                                ProfileMenuRow(icon: "doc.text", title: "隐私条款", iconColor: .blue)
                             }
                             
                             ProfileMenuRow(icon: "info.circle", title: "版本信息", subtitle: "v\(appVersion) (\(buildNumber))", iconColor: .gray)
@@ -102,6 +116,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showingPrivacyTerms) {
                 PrivacyTermsView()
+            }
+            .sheet(isPresented: $showingSecuritySettings) {
+                SecuritySettingsView(securityService: securityService)
             }
             .alert("修改用户名", isPresented: $showingNameEditor) {
                 TextField("输入新用户名", text: $newUserName)

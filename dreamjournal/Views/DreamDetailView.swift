@@ -7,6 +7,7 @@ struct DreamDetailView: View {
     @Bindable var dream: Dream
     @State private var showEditSheet: Bool = false
     @State private var showDeleteConfirmation: Bool = false
+    @State private var showDetailedAnalysis: Bool = false
     
     // 模拟一些相似梦境
     let similarDreams = [
@@ -97,6 +98,27 @@ struct DreamDetailView: View {
                             RoundedRectangle(cornerRadius: 8)
                                 .fill(Color("CardBackgroundColor"))
                         )
+                }
+                .padding(.horizontal)
+                
+                // 添加进一步解析按钮
+                Button(action: {
+                    showDetailedAnalysis = true
+                }) {
+                    HStack {
+                        Image(systemName: "sparkles.magnifyingglass")
+                            .font(.headline)
+                        
+                        Text("进一步解析")
+                            .font(.headline)
+                    }
+                    .foregroundColor(.white)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color("AccentColor"))
+                    )
                 }
                 .padding(.horizontal)
                 
@@ -200,6 +222,9 @@ struct DreamDetailView: View {
         .sheet(isPresented: $showEditSheet) {
             EditDreamView(dream: dream)
         }
+        .sheet(isPresented: $showDetailedAnalysis) {
+            DetailedDreamAnalysisView(dream: dream)
+        }
     }
     
     // 删除当前梦境
@@ -238,7 +263,7 @@ struct DreamDetailView: View {
     }
 }
 
-// 信息卡片组件
+// InfoCard保持不变
 struct InfoCard: View {
     let title: String
     let systemImage: String
