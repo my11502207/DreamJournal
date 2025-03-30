@@ -33,13 +33,19 @@ class DreamAnalysisService {
     
     // 解析梦境内容
     func analyzeDream(date: Date, content: String, completion: @escaping (Result<DreamAnalysisResult, Error>) -> Void) {
-        // 准备请求参数
-        let date = Date()
-        let formatter = ISO8601DateFormatter()
+        // 准备请求参数 - 修复日期格式
+        // 确保日期不包含时间信息
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        let dateWithoutTime = calendar.date(from: components)!
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"  // 使用不含时间的日期格式
+        let dateString = formatter.string(from: dateWithoutTime)
         
         let parameters: [String: Any] = [
             "dream_content": content,
-            "dream_date": formatter.string(from: date),
+            "dream_date": dateString,
             "user_id": "1"
         ]
         

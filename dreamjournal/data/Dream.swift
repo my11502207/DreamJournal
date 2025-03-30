@@ -23,6 +23,13 @@ final class Dream: Codable {
     var isLucidDream: Bool
     var associatedDreams: [String] // 关联梦境的ID
     
+    // 添加分析结果属性
+    var analysisResult: String?
+    var analysisSymbols: [String]?
+    var analysisSentiment: Double?
+    var analysisTheme: String?
+    var analysisDate: Date?
+    
     init(
         id: String = UUID().uuidString,
         title: String,
@@ -34,7 +41,12 @@ final class Dream: Codable {
         location: String? = nil,
         isFavorite: Bool = false,
         isLucidDream: Bool = false,
-        associatedDreams: [String] = []
+        associatedDreams: [String] = [],
+        analysisResult: String? = nil,
+        analysisSymbols: [String]? = nil,
+        analysisSentiment: Double? = nil,
+        analysisTheme: String? = nil,
+        analysisDate: Date? = nil
     ) {
         self.id = id
         self.title = title
@@ -47,12 +59,18 @@ final class Dream: Codable {
         self.isFavorite = isFavorite
         self.isLucidDream = isLucidDream
         self.associatedDreams = associatedDreams
+        self.analysisResult = analysisResult
+        self.analysisSymbols = analysisSymbols
+        self.analysisSentiment = analysisSentiment
+        self.analysisTheme = analysisTheme
+        self.analysisDate = analysisDate
     }
     
     // 实现 Encodable 协议所需的 encode 方法
     enum CodingKeys: String, CodingKey {
         case id, title, dreamContent, date, clarity, emotion, tags
         case location, isFavorite, isLucidDream, associatedDreams
+        case analysisResult, analysisSymbols, analysisSentiment, analysisTheme, analysisDate
     }
     
     func encode(to encoder: Encoder) throws {
@@ -68,6 +86,11 @@ final class Dream: Codable {
         try container.encode(isFavorite, forKey: .isFavorite)
         try container.encode(isLucidDream, forKey: .isLucidDream)
         try container.encode(associatedDreams, forKey: .associatedDreams)
+        try container.encodeIfPresent(analysisResult, forKey: .analysisResult)
+        try container.encodeIfPresent(analysisSymbols, forKey: .analysisSymbols)
+        try container.encodeIfPresent(analysisSentiment, forKey: .analysisSentiment)
+        try container.encodeIfPresent(analysisTheme, forKey: .analysisTheme)
+        try container.encodeIfPresent(analysisDate, forKey: .analysisDate)
     }
     
     // 实现 Decodable 协议所需的初始化方法
@@ -84,5 +107,10 @@ final class Dream: Codable {
         isFavorite = try container.decode(Bool.self, forKey: .isFavorite)
         isLucidDream = try container.decode(Bool.self, forKey: .isLucidDream)
         associatedDreams = try container.decode([String].self, forKey: .associatedDreams)
+        analysisResult = try container.decodeIfPresent(String.self, forKey: .analysisResult)
+        analysisSymbols = try container.decodeIfPresent([String].self, forKey: .analysisSymbols)
+        analysisSentiment = try container.decodeIfPresent(Double.self, forKey: .analysisSymbols)
+        analysisTheme = try container.decodeIfPresent(String.self, forKey: .analysisTheme)
+        analysisDate = try container.decodeIfPresent(Date.self, forKey: .analysisDate)
     }
 }

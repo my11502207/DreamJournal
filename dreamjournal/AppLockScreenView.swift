@@ -79,9 +79,9 @@ struct AppLockScreenView: View {
         }
         .onAppear {
             // 如果设置了自动身份验证，在视图出现时立即尝试认证
-            if securityService.useBiometric && securityService.isBiometricAvailable {
-                authenticate()
-            }
+//            if securityService.useBiometric && securityService.isBiometricAvailable {
+//                authenticate()
+//            }
         }
     }
     

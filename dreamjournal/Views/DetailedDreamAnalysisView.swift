@@ -1,10 +1,12 @@
 import SwiftUI
 
 struct DetailedDreamAnalysisView: View {
-    let dream: Dream
+    @Environment(\.modelContext) private var modelContext
+    @Bindable var dream: Dream
     @State private var analysisResult: DreamAnalysisService.DreamAnalysisResult?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var isAnalysisSaved = false
     @Environment(\.dismiss) private var dismiss
     
     private let analysisService = DreamAnalysisService()
@@ -22,11 +24,17 @@ struct DetailedDreamAnalysisView: View {
                         performAnalysis()
                     }
                 } else if let result = analysisResult, let analysis = result.analysis {
-                    AnalysisContentView(result: result)
+                    AnalysisContentView(result: result, isAnalysisSaved: $isAnalysisSaved) {
+                        // 保存分析结果
+                        saveAnalysisResult(result)
+                    }
                 } else if let result = analysisResult, result.errorMessage != nil {
                     ErrorView(message: result.errorMessage ?? "解析失败") {
                         performAnalysis()
                     }
+                } else if dream.analysisResult != nil {
+                    // 显示已保存的分析结果
+                    SavedAnalysisView(dream: dream)
                 } else {
                     // 初始状态，显示"分析中"的视图
                     VStack {
@@ -82,10 +90,25 @@ struct DetailedDreamAnalysisView: View {
                 }
             }
             .onAppear {
-                // 可选：自动开始分析
-                // performAnalysis()
+                // 检查是否已有分析结果
+                if dream.analysisResult == nil {
+                    // 可选：自动开始分析
+                    // performAnalysis()
+                }
             }
         }
+    }
+    
+    // 保存分析结果到梦境对象中
+    private func saveAnalysisResult(_ result: DreamAnalysisService.DreamAnalysisResult) {
+        dream.analysisResult = result.analysis
+        dream.analysisSymbols = result.symbols
+        dream.analysisSentiment = result.sentiment_score
+        dream.analysisTheme = result.theme
+        dream.analysisDate = Date()
+        
+        // SwiftData会自动保存更改
+        isAnalysisSaved = true
     }
     
     // 执行梦境分析
@@ -100,6 +123,8 @@ struct DetailedDreamAnalysisView: View {
             case .success(let result):
                 if result.analysis != nil {
                     self.analysisResult = result
+                    // 自动保存分析结果
+                    self.saveAnalysisResult(result)
                 } else {
                     // API返回了结果但没有分析内容
                     errorMessage = result.errorMessage ?? "无法解析此梦境，请稍后再试"
@@ -111,70 +136,167 @@ struct DetailedDreamAnalysisView: View {
     }
 }
 
-// 加载中视图
-struct LoadingView: View {
-    var body: some View {
-        VStack(spacing: 20) {
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: Color("AccentColor")))
-                .scaleEffect(2)
-            
-            Text("正在深度解析您的梦境...")
-                .font(.headline)
-                .foregroundColor(Color("SubtitleColor"))
-            
-            Text("这可能需要一些时间，请耐心等待")
-                .font(.subheadline)
-                .foregroundColor(Color("MutedColor"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-        }
-    }
-}
-
-// 错误视图
-struct ErrorView: View {
-    let message: String
-    var retryAction: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 60))
-                .foregroundColor(Color("SubtitleColor"))
-            
-            Text("解析出错")
-                .font(.title3)
-                .foregroundColor(.white)
-            
-            Text(message)
-                .font(.body)
-                .foregroundColor(Color("SubtitleColor"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            
-            Button(action: retryAction) {
-                Text("重新尝试")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color("AccentColor"))
-                    )
-            }
-            .padding(.top)
-        }
-    }
-}
-
-// 解析内容视图
-struct AnalysisContentView: View {
-    let result: DreamAnalysisService.DreamAnalysisResult
+// 已保存的分析视图
+struct SavedAnalysisView: View {
+    let dream: Dream
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                // 分析时间
+                if let analysisDate = dream.analysisDate {
+                    HStack {
+                        Spacer()
+                        Text("分析完成于 \(formattedDate(analysisDate))")
+                            .font(.caption)
+                            .foregroundColor(Color("SubtitleColor"))
+                    }
+                    .padding(.horizontal)
+                }
+                
+                // 解释部分
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("梦境解读")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    
+                    Text(dream.analysisResult ?? "")
+                        .font(.body)
+                        .foregroundColor(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color("CardBackgroundColor"))
+                        )
+                }
+                .padding(.horizontal)
+                
+                // 象征物部分
+                if let symbols = dream.analysisSymbols, !symbols.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("梦境象征物")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 10) {
+                            ForEach(symbols, id: \.self) { symbol in
+                                SymbolTag(symbol: symbol)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                
+                // 情感分数
+                if let sentimentScore = dream.analysisSentiment {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("情感倾向")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        
+                        SentimentScoreView(score: sentimentScore)
+                    }
+                    .padding(.horizontal)
+                }
+                
+                // 主题
+                if let theme = dream.analysisTheme, !theme.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("梦境主题")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        
+                        Text(theme)
+                            .font(.body)
+                            .foregroundColor(.white)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color("CardBackgroundColor"))
+                            )
+                    }
+                    .padding(.horizontal)
+                }
+                
+                // 提示信息
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("记录梦境的好处")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    
+                    Text("研究表明，定期记录和解析梦境有助于提高自我认知、增强创造力，甚至可能改善心理健康。通过理解您的梦境象征，您可以获得对内心世界的独特洞察。")
+                        .font(.subheadline)
+                        .foregroundColor(Color("SubtitleColor"))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color("CardBackgroundColor"))
+                        )
+                }
+                .padding(.horizontal)
+            }
+            .padding(.vertical)
+        }
+    }
+    
+    // 格式化日期
+    private func formattedDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+}
+
+// 解析内容视图 - 添加保存按钮
+struct AnalysisContentView: View {
+    let result: DreamAnalysisService.DreamAnalysisResult
+    @Binding var isAnalysisSaved: Bool
+    let saveAction: () -> Void
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // 保存按钮
+                if !isAnalysisSaved {
+                    Button(action: saveAction) {
+                        HStack {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.headline)
+                            
+                            Text("保存分析结果")
+                                .font(.headline)
+                        }
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color("AccentColor"))
+                        )
+                    }
+                    .padding(.horizontal)
+                } else {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        
+                        Text("分析结果已保存")
+                            .font(.headline)
+                            .foregroundColor(.green)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color("CardBackgroundColor"))
+                    )
+                    .padding(.horizontal)
+                }
+                
                 // 解释部分
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
@@ -201,6 +323,7 @@ struct AnalysisContentView: View {
                                 .fill(Color("CardBackgroundColor"))
                         )
                 }
+                .padding(.horizontal)
                 
                 // 象征物部分
                 if let symbols = result.symbols, !symbols.isEmpty {
@@ -215,6 +338,7 @@ struct AnalysisContentView: View {
                             }
                         }
                     }
+                    .padding(.horizontal)
                 }
                 
                 // 情感分数
@@ -226,6 +350,7 @@ struct AnalysisContentView: View {
                         
                         SentimentScoreView(score: sentimentScore)
                     }
+                    .padding(.horizontal)
                 }
                 
                 // 主题
@@ -245,6 +370,7 @@ struct AnalysisContentView: View {
                                     .fill(Color("CardBackgroundColor"))
                             )
                     }
+                    .padding(.horizontal)
                 }
                 
                 // 提示信息
@@ -263,8 +389,9 @@ struct AnalysisContentView: View {
                                 .fill(Color("CardBackgroundColor"))
                         )
                 }
+                .padding(.horizontal)
             }
-            .padding()
+            .padding(.vertical)
         }
     }
 }
@@ -388,3 +515,61 @@ struct DetailedDreamAnalysisView_Previews: PreviewProvider {
         .preferredColorScheme(.dark)
     }
 }
+
+// 加载中视图
+struct LoadingView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: Color("AccentColor")))
+                .scaleEffect(2)
+            
+            Text("正在深度解析您的梦境...")
+                .font(.headline)
+                .foregroundColor(Color("SubtitleColor"))
+            
+            Text("这可能需要一些时间，请耐心等待")
+                .font(.subheadline)
+                .foregroundColor(Color("MutedColor"))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+        }
+    }
+}
+
+// 错误视图
+struct ErrorView: View {
+    let message: String
+    var retryAction: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 60))
+                .foregroundColor(Color("SubtitleColor"))
+            
+            Text("解析出错")
+                .font(.title3)
+                .foregroundColor(.white)
+            
+            Text(message)
+                .font(.body)
+                .foregroundColor(Color("SubtitleColor"))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            
+            Button(action: retryAction) {
+                Text("重新尝试")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color("AccentColor"))
+                    )
+            }
+            .padding(.top)
+        }
+    }
+}
+

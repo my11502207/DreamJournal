@@ -151,6 +151,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = dreamjournal/Info.plist;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "使用面部识别解锁应用";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "we need your micro privilege to record your dream";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "we need speech recognition privileges to record your dream";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -184,6 +185,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = dreamjournal/Info.plist;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "使用面部识别解锁应用";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "we need your micro privilege to record your dream";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "we need speech recognition privileges to record your dream";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

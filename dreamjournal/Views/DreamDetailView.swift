@@ -86,30 +86,87 @@ struct DreamDetailView: View {
                 
                 // 梦境分析
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("梦境分析:")
-                        .font(.subheadline)
-                        .foregroundColor(Color("SubtitleColor"))
+                    HStack {
+                        Text("梦境分析:")
+                            .font(.subheadline)
+                            .foregroundColor(Color("SubtitleColor"))
+                        
+                        if dream.analysisResult != nil {
+                            Spacer()
+                            
+                            Text("AI分析")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(Color("AccentColor").opacity(0.7))
+                                )
+                        }
+                    }
                     
-                    Text(dreamAnalysis())
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color("CardBackgroundColor"))
-                        )
+                    if let analysis = dream.analysisResult {
+                        // 显示保存的AI分析
+                        Text(analysis)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color("CardBackgroundColor"))
+                            )
+                        
+                        // 如果有象征物，显示前3个
+                        if let symbols = dream.analysisSymbols, !symbols.isEmpty {
+                            HStack {
+                                Text("象征物:")
+                                    .font(.caption)
+                                    .foregroundColor(Color("SubtitleColor"))
+                                
+                                ForEach(symbols.prefix(3), id: \.self) { symbol in
+                                    Text(symbol)
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            Capsule()
+                                                .fill(Color("CardBackgroundColor").opacity(0.7))
+                                        )
+                                }
+                                
+                                if symbols.count > 3 {
+                                    Text("+\(symbols.count - 3)")
+                                        .font(.caption)
+                                        .foregroundColor(Color("SubtitleColor"))
+                                }
+                            }
+                            .padding(.top, 4)
+                        }
+                    } else {
+                        // 显示基本分析
+                        Text(dreamAnalysis())
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color("CardBackgroundColor"))
+                            )
+                    }
                 }
                 .padding(.horizontal)
                 
-                // 添加进一步解析按钮
+                // "进一步解析"按钮文字根据是否已有分析而变化
                 Button(action: {
                     showDetailedAnalysis = true
                 }) {
                     HStack {
-                        Image(systemName: "sparkles.magnifyingglass")
+                        Image(systemName: dream.analysisResult == nil ? "sparkles.magnifyingglass" : "arrow.clockwise")
                             .font(.headline)
                         
-                        Text("进一步解析")
+                        Text(dream.analysisResult == nil ? "进一步解析" : "更新解析")
                             .font(.headline)
                     }
                     .foregroundColor(.white)
@@ -251,7 +308,7 @@ struct DreamDetailView: View {
         }
     }
     
-    // 根据梦境内容生成分析
+    // 根据梦境内容生成基本分析
     private func dreamAnalysis() -> String {
         if dream.title.contains("飞行") {
             return "飞行梦通常象征自由感和控制欲望。你的梦境表明你可能正在寻求生活中的更多自由或突破限制。城市环境可能反映了你对社会结构的看法，而你能够在其中自由移动，表明了你有能力超越常规思维和限制。"
